@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud-Based IoT Data Storage</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #fff;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #fff;
+            text-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        input[type="file"]:hover {
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #fff;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+        li {
+            background: rgba(255, 255, 255, 0.1);
+            margin: 10px 0;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+        li:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        a {
+            color: #6a11cb;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+        a:hover {
+            color: #2575fc;
+        }
+
+        /* Notification Popup Styling */
+        .popup {
+            visibility: hidden;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: visibility 0.3s ease;
+        }
+        .popup.show {
+            visibility: visible;
+        }
+
+        /* Animation for container */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .container {
+            animation: fadeIn 0.8s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cloud-Based IoT Data Storage</h1>
+
+        <!-- File Upload Form -->
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" id="dataFile" required>
+            <button type="submit">Upload Data</button>
+        </form>
+
+        <!-- Data List -->
+        <h2>Stored Data</h2>
+        <ul id="dataList"></ul>
+
+        <!-- Popup Notification -->
+        <div id="popup" class="popup">Data uploaded successfully!</div>
+    </div>
+
+    <script>
+        // Function to show a popup notification
+        function showPopup(message, success = true) {
+            const popup = document.getElementById('popup');
+            popup.textContent = message;
+            popup.style.background = success 
+                ? 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)'
+                : 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)';
+            popup.classList.add('show');
+            setTimeout(() => popup.classList.remove('show'), 3000);
+        }
+
+        // Handle file upload
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('dataFile');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('http://localhost:5000/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showPopup(`🎉 ${result.message}`);
+                    loadData();
+                } else {
+                    const error = await response.json();
+                    console.error("Backend error:", error);  // Log the backend error
+                    showPopup(`❌ ${error.error || 'Upload failed! Please try again.'}`, false);
+                }
+            } catch (error) {
+                console.error('Error uploading data:', error);
+                showPopup('❌ Error uploading data. Try again.', false);
+            }
+        });
+
+        // Load and display the list of uploaded files
+        async function loadData() {
+            const dataList = document.getElementById('dataList');
+            dataList.innerHTML = '';
+
+            try {
+                const response = await fetch('http://localhost:5000/data');
+                const dataFiles = await response.json();
+
+                if (dataFiles.length === 0) {
+                    dataList.innerHTML = '<li>No data files uploaded yet.</li>';
+                } else {
+                    dataFiles.forEach(file => {
+                        const listItem = document.createElement('li');
+                        listItem.innerHTML = `${file} - <a href="http://localhost:5000/download/${file}" target="_blank">Download</a>`;
+                        dataList.appendChild(listItem);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showPopup('❌ Error loading data list.', false);
+            }
+        }
+
+        // Load data when the page loads
+        window.onload = loadData;
+    </script>
+</body>
+</html>
